@@ -9,7 +9,7 @@ ext{
     // - be: depend on the very latest commit of mindustry
     // - v<number>: depend on a specific version
     mindustryVersion = findProperty("mindustryVersion") ?: "v159.7"
-    modVersion = findProperty("modVersion") ?: "1.4.0"
+    modVersion = findProperty("modVersion") ?: "1.1.0"
     isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
     sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
 }
