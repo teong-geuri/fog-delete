@@ -1,20 +1,20 @@
 #the mod name as displayed in-game
-displayName: "Frame Parallelization Mod"
+displayName: "Fog Delete"
 
 #the internal name of your mod
-name: "frame-parallel"
+name: "fog-delete"
 
 #your name
 author: "teong_geuri"
 
 #the fully qualified main class of the mod
-main: "frameparallel.FrameParallelMod"
+main: "fogdelete.FogDeleteMod"
 
 #the mod description as seen in the mod dialog
-description: "Multi-core parallelization mod offloading Minimap, PowerGraph, Fog, AI Target Search, Building Search, Fire/Puddle, Audio, and Trail rendering to worker threads."
+description: "안개(Fog of War)와 조명 시스템으로 인한 검은 가림막을 맵 로드 시마다 강제로 제거합니다."
 
 #the mod version
-version: 1.4.0
+version: 1.0.0
 
 #the minimum game build required to run this mod
 minGameVersion: 159.7
