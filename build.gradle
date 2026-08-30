@@ -2,14 +2,22 @@ apply plugin: "java"
 
 sourceSets.main.java.srcDirs = ["src"]
 
+//reads a "key: value" line out of mod.hjson; returns null if not found
+def readHjsonField(String key){
+    def source = file("mod.hjson").getText("UTF-8")
+    def matcher = source =~ /(?m)^${key}:\s*"?([^",\n]+)"?\s*$/
+    return matcher.find() ? matcher.group(1).trim() : null
+}
+
 ext{
     // Mindustry version to depend on.
     // Valid values:
     // - latest: depend on the latest release of mindustry
     // - be: depend on the very latest commit of mindustry
     // - v<number>: depend on a specific version
-    mindustryVersion = findProperty("mindustryVersion") ?: "v159.7"
-    modVersion = findProperty("modVersion") ?: "1.2.0"
+    // Defaults come from mod.hjson (minGameVersion / version) unless overridden with -P flags.
+    mindustryVersion = findProperty("mindustryVersion") ?: "v${readHjsonField("minGameVersion") ?: "159.7"}"
+    modVersion = findProperty("modVersion") ?: (readHjsonField("version") ?: "1.2.0")
     isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
     sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
 }
