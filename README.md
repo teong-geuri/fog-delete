@@ -1,66 +1,66 @@
-# Frame Parallelization Mod (v1.4.0)
+# Fog Delete (v1.0.0)
 
-High-performance client-side multi-core offloading mod for Mindustry (`v159.7+`).
-
----
-
-## ⚡ Overview
-
-This mod offloads CPU-heavy rendering preparation and game-state read queries from the single main thread to dedicated worker threads (`RenderWorkerPool`), eliminating frame drops and stuttering in large maps and late-game mega-bases.
+Client-side fog-of-war and darkness removal mod for Mindustry (`v146+`).
 
 ---
 
-## 🛠️ Subsystem Parallelization Matrix (9 Modules)
+## Overview
 
-| Priority | Module | Strategy | Description |
+This mod forcibly removes fog-of-war and lighting/darkness overlays on every map load, revealing the entire map immediately regardless of the map's original rules or previously-baked static fog data.
+
+---
+
+## Removal Matrix (3 Layers)
+
+| Layer | Target | Strategy | Description |
 |---|---|---|---|
-| **1** | `ParticleRendererController` | Async Pipeline | Activates Mindustry's built-in async particle renderer. |
-| **1** | `AsyncMinimapHandler` | 1-Frame Look-Ahead | Double-buffered `colorForTile()` computation on worker threads. |
-| **2** | `AsyncPowerGraphHandler` | Graph Topology | Independent `PowerGraph` instances updated concurrently. |
-| **2** | `AsyncTargetSearchHandler` | QuadTree Pre-search | AI unit target candidates pre-cached in parallel. |
-| **3** | `AsyncBuildingSearchHandler` | Safe Snapshot Caching | Damaged building index snapshot taken on the main thread only, then served to callers safely from cache. |
-| **3** | `AsyncFogHandler` | 2D Region Chunking | Fog-of-war raycasting split into 2D map quadrants. |
-| **4** | `AsyncFloorRenderer` | 30×30 Spatial Chunk | Floor mesh re-caching offloaded to worker threads. |
-| **4** | `AsyncFirePuddleHandler` | Quadrant Partitioning | Fire propagation and puddle evaporation processed concurrently. |
-| **4** | `AsyncTrailRenderer` | Array Range Slicing | Bullet/unit trail vertex generation sliced across cores. |
+| 1 | `Rules.fog` / `Rules.staticFog` | Rule Override | Disables the fog-of-war system entirely so it never re-applies on future frames. |
+| 2 | `Rules.lighting` / `Rules.ambientLight` | Rule Override | Disables ambient darkness rendering (used on cave/dark maps) by zeroing out ambient light alpha. |
+| 3 | `FogControl.getDiscovered(team)` | Live Bitmap Patch | Forces the already-baked static "undiscovered" bitmap for every team to fully "discovered", then re-syncs it to the GPU texture. |
 
 ---
 
-## 🚀 Initial World Load Optimization
+## Applied Rule Changes
 
-On `WorldLoadEvent` (map load / save load):
-- **Parallel Minimap Generator**: 250,000+ tiles partitioned by Y-row across all worker cores — full minimap rendered **4×–8× faster** with no single-thread freeze.
-- **Floor Mesh Warmup**: 30×30 tile floor mesh caches are pre-built in the background before the first rendered frame.
-
----
-
-## ⚙️ CPU Scheduling Policy
-
-- **Worker threads**: `totalCores - 1` threads (1 core reserved for the main OpenGL/UI thread).
-- **Thread priority**: `Thread.NORM_PRIORITY + 1` — worker threads are scheduled slightly above normal priority for faster core allocation and lower latency on offloaded work.
+| Rule | Value | Effect |
+|---|---|---|
+| `fog` | `false` | Fog-of-war system disabled |
+| `staticFog` | `false` | Static (black, undiscovered) fog disabled |
+| `lighting` | `false` | Ambient darkness system disabled |
+| `ambientLight` | `(1,1,1,0)` | Ambient light fully transparent (no visual effect even if re-enabled) |
 
 ---
 
-## 🛡️ Thread Safety Notes
+## Installation
 
-- `BlockIndexer.getDamaged()` mutates the underlying `Seq` in-place (`removeAll`). Calling it from a background thread while the main thread iterates `eachBlock()` causes a race condition (`items[i] = null` → NPE crash with `OverdriveProjector`).
-  **Fix**: `AsyncBuildingSearchHandler` calls `getDamaged()` **only on the main thread** and stores a `copy()` snapshot in a `ConcurrentHashMap` for safe cross-thread reads.
-- All `EntityGroup` reads (units, fire, puddle) use index-based access (`group.index(i)`) to avoid iterator invalidation.
+```
+Mindustry's mod menu can install directly from a GitHub repository, without manually downloading the jar.
 
----
+1. In-game: Settings → Mods → Import Mod
+2. Paste the repository link (or `username/repo` shorthand), e.g. `https://github.com/YOUR-USERNAME/fog-delete` or `YOUR-USERNAME/fog-delete`
+3. Mindustry automatically fetches the latest GitHub Release's jar and installs it
+4. Restart Mindustry
 
-## 🔨 Building
-
-Requires **JDK 17** or newer.
-
-```bash
-./gradlew jar
+This only works because the repository publishes proper GitHub Releases with the built jar attached (see CI/CD below). If a release is missing or the jar name doesn't match, this method will fail — use Option 2 instead.
 ```
 
-Output: `build/libs/frame-parallelDesktop.jar`
+or 
+
+```
+1. Grab the latest `fog-delete.jar` from Releases
+2. In-game: Settings → Mods → Import Mod → select the downloaded jar file
+3. Restart Mindustry
+```
 
 ---
 
-## 🎮 Multiplayer Compatibility
+## Known Limitations
 
-`hidden: true` — render-only, no simulation state changes, no network packets, no content additions. 100% compatible with vanilla multiplayer servers.
+- Depends on internal engine classes (`FogControl`, `Bits`, `Rules`) that may change between Mindustry versions and break this mod.
+- `getDiscovered()` returning `null` for a team that hasn't loaded yet is handled gracefully (skipped), but very early-frame edge cases haven't been exhaustively tested.
+
+---
+
+## License
+
+MIT.
