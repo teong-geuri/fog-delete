@@ -41,10 +41,10 @@ Mindustry's mod menu can install directly from a GitHub repository, without manu
 3. Mindustry automatically fetches the latest GitHub Release's jar and installs it
 4. Restart Mindustry
 
-This only works because the repository publishes proper GitHub Releases with the built jar attached (see CI/CD below). If a release is missing or the jar name doesn't match, this method will fail — use Option 2 instead.
+This only works because the repository publishes proper GitHub Releases with the built jar attached (see CI/CD below). If a release is missing or the jar name doesn't match, this method will fail - use Option 2 instead.
 ```
 
-or 
+or
 
 ```
 1. Grab the latest `fog-delete.jar` from Releases
