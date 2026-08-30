@@ -1,0 +1,26 @@
+#the mod name as displayed in-game
+displayName: "Frame Parallelization Mod"
+
+#the internal name of your mod
+name: "frame-parallel"
+
+#your name
+author: "teong_geuri"
+
+#the fully qualified main class of the mod
+main: "frameparallel.FrameParallelMod"
+
+#the mod description as seen in the mod dialog
+description: "Multi-core parallelization mod offloading Minimap, PowerGraph, Fog, AI Target Search, Building Search, Fire/Puddle, Audio, and Trail rendering to worker threads."
+
+#the mod version
+version: 1.4.0
+
+#the minimum game build required to run this mod
+minGameVersion: 159.7
+
+#this is a java mod
+java: true
+
+#hide from multiplayer mod list; this mod must stay client-side/render-only
+hidden: true
