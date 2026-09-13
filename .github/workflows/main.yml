@@ -19,17 +19,11 @@ jobs:
         distribution: 'temurin'
         java-version: 17
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Accept SDK licenses
-      run: yes | sdkmanager --licenses || true
-
-    - name: Install build-tools and platform
-      run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
-
-    - name: Set up PATH
-      run: echo "${ANDROID_HOME}/build-tools/34.0.0" >> "$GITHUB_PATH"
+    - name: Accept SDK licenses & Install build-tools
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34"
+        echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
 
     - name: Read version from mod.hjson
       id: modver
