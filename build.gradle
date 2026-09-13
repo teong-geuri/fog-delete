@@ -68,25 +68,38 @@ tasks.register("generateModMetadata"){
     }
 }
 
-tasks.register('jarAndroid'){
+tasks.register('jarAndroid') {
     dependsOn "jar"
     def projectName = project.name
 
-    doLast{
-        if(!sdkRoot || !new File(sdkRoot).exists()) throw new GradleException("No valid Android SDK found. Ensure that ANDROID_HOME is set to your Android SDK directory.")
+    doLast {
+        if(!sdkRoot || !new File(sdkRoot).exists()) {
+            throw new GradleException("No valid Android SDK found. Set ANDROID_HOME environment variable.")
+        }
 
-        def platformRoot = new File("$sdkRoot/platforms/").listFiles().sort().reverse().find{ f -> new File(f, "android.jar").exists() }
+        // 최신 android.jar 찾기
+        def platformRoot = new File("$sdkRoot/platforms/").listFiles()?.sort()?.reverse()?.find { f -> new File(f, "android.jar").exists() }
+        if(!platformRoot) throw new GradleException("No android.jar found in SDK platforms directory.")
 
-        if(!platformRoot) throw new GradleException("No android.jar found. Ensure that you have an Android platform installed.")
+        // d8 실행 파일 경로를 명확히 추적
+        def d8Executable = isWindows ? "d8.bat" : "d8"
+        def buildToolsDir = new File("$sdkRoot/build-tools/").listFiles()?.sort()?.last()
+        def d8File = buildToolsDir ? new File(buildToolsDir, d8Executable) : null
 
-        //collect dependencies needed for desugaring
-        def dependencies = (configurations.compileClasspath.asList() + configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")]).collect{ "--classpath $it.path" }.join(" ")
+        def d8Path = (d8File && d8File.exists()) ? d8File.absolutePath : d8Executable
 
-        def d8 = isWindows ? "d8.bat" : "d8"
+        // Desugaring에 필요한 Classpath 모으기
+        def classpaths = (configurations.compileClasspath.asList() + configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")])
 
-        //dex and desugar files - this requires d8 in your PATH
-        "$d8 $dependencies --min-api 21 --output ${projectName}Android.jar ${projectName}Desktop.jar"
-                .execute(null, new File("build/libs")).waitForProcessOutput(System.out, System.err)
+        // Gradle 공식 exec 메서드로 안전하게 실행
+        exec {
+            def command = [d8Path]
+            classpaths.each { command.addAll(["--classpath", it.path]) }
+            // min-api를 26 이상으로 지정해야 Java 17 문법 및 최신 Desugaring이 안정적으로 변환됩니다.
+            command.addAll(["--min-api", "26", "--output", "build/libs/${projectName}Android.jar", "build/libs/${projectName}Desktop.jar"])
+            
+            commandLine command
+        }
     }
 }
 
@@ -105,17 +118,16 @@ jar{
     }
 }
 
-tasks.register('deploy', Jar){
+tasks.register('deploy', Jar) {
     def projectName = project.name
     dependsOn jarAndroid
     dependsOn jar
     archiveFileName = "${projectName}.jar"
 
-    from{ [zipTree("build/libs/${projectName}Desktop.jar"), zipTree("build/libs/${projectName}Android.jar")] }
+    // Desktop.jar 와 Android.jar(classes.dex 포함)를 하나의 jar로 합칩니다.
+    from { [zipTree("build/libs/${projectName}Desktop.jar"), zipTree("build/libs/${projectName}Android.jar")] }
 
-    doLast{
-        delete{
-            delete "build/libs/${projectName}Android.jar"
-        }
+    doLast {
+        delete "build/libs/${projectName}Android.jar"
     }
 }
