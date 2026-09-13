@@ -73,27 +73,31 @@ tasks.register('jarAndroid') {
     def projectName = project.name
 
     doLast {
-        if(!sdkRoot || !new File(sdkRoot).exists()) throw new GradleException("No valid Android SDK found. Ensure ANDROID_HOME is set.")
+        if(!sdkRoot || !new File(sdkRoot).exists()) {
+            throw new GradleException("No valid Android SDK found. Set ANDROID_HOME or ANDROID_SDK_ROOT.")
+        }
 
         def platformRoot = new File("$sdkRoot/platforms/").listFiles()?.sort()?.reverse()?.find { f -> new File(f, "android.jar").exists() }
         if(!platformRoot) throw new GradleException("No android.jar found in SDK platforms directory.")
 
-        // d8 실행 파일 찾기
+        // 1. d8 실행 파일 경로 정밀 검색 (Windows / Linux CI 모두 대응)
         def d8Executable = isWindows ? "d8.bat" : "d8"
         def buildToolsDir = new File("$sdkRoot/build-tools/").listFiles()?.sort()?.last()
         def d8File = buildToolsDir ? new File(buildToolsDir, d8Executable) : null
         def d8Path = (d8File && d8File.exists()) ? d8File.absolutePath : d8Executable
 
-        // Classpath 인자 생성
+        // 2. Classpath 배열 생성
         def deps = (configurations.compileClasspath.asList() + configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")])
         def d8Args = []
         deps.each { 
             d8Args.add("--classpath")
             d8Args.add(it.path)
         }
+        
+        // 3. Java 17 문법 Desugaring을 위한 min-api 26 지정 및 출력 경로 설정
         d8Args.addAll(["--min-api", "26", "--output", "build/libs/${projectName}Android.jar", "build/libs/${projectName}Desktop.jar"])
 
-        // DefaultTask 내부이므로 project.exec 사용
+        // 4. project.exec를 사용하여 d8 실패 시 빌드가 실패하도록 처리
         project.exec {
             commandLine([d8Path] + d8Args)
         }
@@ -121,7 +125,7 @@ tasks.register('deploy', Jar) {
     dependsOn jar
     archiveFileName = "${projectName}.jar"
 
-    // Desktop.jar 와 Android.jar(classes.dex 포함)를 하나의 jar로 합칩니다.
+    // Desktop.jar와 classes.dex가 포함된 Android.jar를 하나로 통합
     from { [zipTree("build/libs/${projectName}Desktop.jar"), zipTree("build/libs/${projectName}Android.jar")] }
 
     doLast {
