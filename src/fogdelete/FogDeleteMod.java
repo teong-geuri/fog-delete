@@ -41,6 +41,16 @@ public class FogDeleteMod extends Mod {
         Events.on(WorldLoadEvent.class, e -> {
             staticFogCleared = false;
             applyNoFog();
+
+            // 안전장치: 블록 렌더러는 한 번 그려진 청크(chunk)를 스프라이트
+            // 캐시에 구워두고, 이후 다시 안 그린다. 만약 이 청크가 rules.fog가
+            // 꺼지기 전에(=건물이 안개에 가려진 상태로) 먼저 구워졌다면, 그
+            // 뒤에 rules.fog를 꺼도 캐시가 갱신되지 않아 건물이 계속 검게
+            // 보일 수 있다. 로드 직후 캐시를 통째로 비워서 이후 모든 청크가
+            // "안개 꺼진" 상태로 다시 그려지도록 강제한다.
+            if (Vars.renderer != null && Vars.renderer.blocks != null) {
+                Vars.renderer.blocks.reload();
+            }
         });
 
         // 핵심 수정: Control.playMap() 등에서는 WorldLoadEvent가 발생한 "직후"에
@@ -75,6 +85,12 @@ public class FogDeleteMod extends Mod {
                 staticFogCleared = true;
                 if (Vars.renderer != null && Vars.renderer.fog != null) {
                     Vars.renderer.fog.copyFromCpu();
+                }
+                // Control.playMap() 등이 WorldLoadEvent 직후 rules 객체를
+                // 통째로 바꿔치기하는 경우까지 대비해, 실제로 안개가 완전히
+                // 걷힌 첫 틱에 한 번 더 청크 캐시를 강제로 비워준다.
+                if (Vars.renderer != null && Vars.renderer.blocks != null) {
+                    Vars.renderer.blocks.reload();
                 }
             }
         }
