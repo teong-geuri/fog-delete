@@ -68,37 +68,38 @@ tasks.register("generateModMetadata"){
     }
 }
 
+// ExecOperations 서비스 주입을 위한 인터페이스 정의
+interface ExecOps {
+    @Inject
+    ExecOperations getExecOperations()
+}
+
 tasks.register('jarAndroid') {
     dependsOn "jar"
     def projectName = project.name
+    def execOps = objects.newInstance(ExecOps)
 
     doLast {
-        if(!sdkRoot || !new File(sdkRoot).exists()) {
-            throw new GradleException("No valid Android SDK found. Set ANDROID_HOME or ANDROID_SDK_ROOT.")
-        }
+        if(!sdkRoot || !new File(sdkRoot).exists()) throw new GradleException("No valid Android SDK found.")
 
         def platformRoot = new File("$sdkRoot/platforms/").listFiles()?.sort()?.reverse()?.find { f -> new File(f, "android.jar").exists() }
         if(!platformRoot) throw new GradleException("No android.jar found in SDK platforms directory.")
 
-        // 1. d8 실행 파일 경로 정밀 검색 (Windows / Linux CI 모두 대응)
         def d8Executable = isWindows ? "d8.bat" : "d8"
         def buildToolsDir = new File("$sdkRoot/build-tools/").listFiles()?.sort()?.last()
         def d8File = buildToolsDir ? new File(buildToolsDir, d8Executable) : null
         def d8Path = (d8File && d8File.exists()) ? d8File.absolutePath : d8Executable
 
-        // 2. Classpath 배열 생성
         def deps = (configurations.compileClasspath.asList() + configurations.runtimeClasspath.asList() + [new File(platformRoot, "android.jar")])
         def d8Args = []
         deps.each { 
             d8Args.add("--classpath")
             d8Args.add(it.path)
         }
-        
-        // 3. Java 17 문법 Desugaring을 위한 min-api 26 지정 및 출력 경로 설정
         d8Args.addAll(["--min-api", "26", "--output", "build/libs/${projectName}Android.jar", "build/libs/${projectName}Desktop.jar"])
 
-        // 4. project.exec를 사용하여 d8 실패 시 빌드가 실패하도록 처리
-        project.exec {
+        // Gradle 9.x 전용 안전한 exec 실행 방식
+        execOps.execOperations.exec {
             commandLine([d8Path] + d8Args)
         }
     }
