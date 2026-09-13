@@ -5,6 +5,7 @@ import mindustry.Vars;
 import mindustry.game.Team;
 import mindustry.game.EventType.WorldLoadEvent;
 import mindustry.game.EventType.Trigger;
+import mindustry.gen.Groups;
 import arc.Events;
 import arc.struct.Bits;
 import arc.util.Log;
@@ -91,6 +92,17 @@ public class FogDeleteMod extends Mod {
                 // 걷힌 첫 틱에 한 번 더 청크 캐시를 강제로 비워준다.
                 if (Vars.renderer != null && Vars.renderer.blocks != null) {
                     Vars.renderer.blocks.reload();
+
+                    // reload()는 전체 캐시를 통째로 밀어버리는 방식이라
+                    // 타이밍에 따라 씹힐 수 있으니, 실제로 존재하는 모든
+                    // 건물을 하나씩 "재캐싱 대상"으로 표시해서 확실하게
+                    // 다시 그리도록 한다. (한 번만 실행되므로 부담 없음)
+                    Groups.build.each(b -> {
+                        if (b.block != null) {
+                            Vars.renderer.blocks.recacheBuilding(b.block.buildingCacheLayer, b.tile);
+                            b.wasVisible = true;
+                        }
+                    });
                 }
             }
         }
