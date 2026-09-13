@@ -1,6 +1,6 @@
-# Fog Delete (v1.1.0)
+# Fog Delete
 
-Client-side fog-of-war and darkness removal mod for Mindustry (`v146+`).
+Client-side fog-of-war and darkness removal mod for Mindustry (`v159.7+`).
 
 ---
 
