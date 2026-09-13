@@ -30,6 +30,13 @@ public class FogDeleteMod extends Mod {
         }
         Log.info("[FogDelete] 블록 @개의 그림자 비활성화함", count);
 
+        // 블록/지형 위에 남아있는 검은 음영(ambient occlusion)은 fog나
+        // lighting 규칙과는 완전히 별개인 Vars.enableDarkness 전역 스위치가
+        // 그리는 것이다 (Renderer.java: if(enableDarkness) drawDarkness()).
+        // state.rules와 달리 맵 로드 때마다 초기화되지 않는 전역 static
+        // 필드라서 한 번만 꺼주면 계속 유지된다.
+        Vars.enableDarkness = false;
+
         // 맵이 새로 로드될 때마다 "이미 밝힌 지역" 비트를 다시 초기화해야 함
         Events.on(WorldLoadEvent.class, e -> {
             staticFogCleared = false;
